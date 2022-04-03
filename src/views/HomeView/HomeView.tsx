@@ -1,44 +1,60 @@
-import React, { useState } from 'react';
-import {Button, FlatList, Image, StyleSheet, Text, Touchable, TouchableOpacity, TouchableOpacityBase, View} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {
+  Button,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {BookList} from '../../data/BookList';
 import {Book} from '../../models/Book';
+import {Client} from '@notionhq/client';
+import {notionConfig} from '../../config/notion';
+import { InventoryItem } from '../../models/InventoryItem';
+
+const notion = new Client({auth: notionConfig.NOTION_KEY});
+const databaseId = notionConfig.NOTION_DATABASE_ID;
 
 const HomeView = () => {
-  const [counter, setCounter] = useState(0);
+  const [inventoryList, setInventoryList] = useState<InventoryItem[]>([]);
 
-  const onNext = () => {
-    setCounter(prevCounter => prevCounter + 1);
-  };
-  const onPrevious = () => {
-    setCounter(prevCounter => prevCounter - 1);
+
+  useEffect(() => {
+    fetchData()
+      .then(result => {
+        setInventoryList(result.results.map(r => ({
+          id : r.id, 
+          name: r.properties.Name.title[0].plain_text, 
+          room: r.properties.Room.select.name
+        })))
+      })
+      .catch(err => console.error({err}));
+  }, []);
+
+  const fetchData = async () => {
+    console.log({databaseId});
+    return await notion.databases.query({database_id: databaseId});
   };
 
   return (
     <View>
-      <Text>Counter's valiue = {counter}</Text>
-      <Button title="Next" onPress={onNext} />
-      <Button title="Previous" onPress={onPrevious} />
+        <Text style={styles.appTitle}>Inventory App</Text>
       <FlatList
-        data={BookList}
+        data={inventoryList}
         keyExtractor={item => item.id}
-        renderItem={({item}) => <BookInfo {...item} />}
+        renderItem={({item}) => <InventoryInfo {...item} />}
       />
     </View>
   );
 };
 
-const BookInfo = ({name, status, image}: Book) => {
-  const getBookName = () => {
-    console.log("name is ", name)
-  }
+const InventoryInfo = ({name, room}: InventoryItem) => {
   return (
     <View>
-      <Text>This is a book</Text>
-      <Text>
-        name : {name}, status: {status}
-      </Text>
-      <TouchableOpacity onPress={getBookName}>
-      <Image source={require("../../assets/images/miracle-morning.jpg")} style={styles.image} />
+      <TouchableOpacity onPress={() => console.log(name)}>
+      <Text style={styles.title}>{name}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -47,8 +63,38 @@ const BookInfo = ({name, status, image}: Book) => {
 export default HomeView;
 
 const styles = StyleSheet.create({
+  appTitle: {
+    fontSize: 34,
+    backgroundColor: "yellow",
+    color: "blue"
+  },
+  title: {
+    fontSize: 26
+  },
   image: {
     width: 100,
     height: 200,
+  },
+
+  btnParentSection: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+
+  btnSection: {
+    width: 225,
+    height: 50,
+    backgroundColor: '#DCDCDC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 3,
+    marginBottom: 10,
+  },
+
+  btnText: {
+    textAlign: 'center',
+    color: 'gray',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
